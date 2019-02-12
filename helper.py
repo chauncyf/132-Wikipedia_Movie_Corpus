@@ -5,7 +5,6 @@ Name: Chenfeng Fan (fanc@brandeis.edu)
 
 import re
 import json
-import geograpy
 import wptools
 import wikipediaapi
 
