@@ -1,5 +1,11 @@
+"""
+Assignment 2: Building a Corpus
+Name: Chenfeng Fan (fanc@brandeis.edu)
+"""
+
 import re
 import json
+import geograpy
 import wptools
 import wikipediaapi
 
@@ -8,7 +14,11 @@ COMMA_REGEX = re.compile(',?([-\w()|.\' ]+(\w|\.)),?')
 PLAIN_UBL_REGEX = re.compile('[*|]+ ?\[*([-\w()|.\' ]+(\w|\.))\]*')
 DOUBLE_BRACES_REGEX = re.compile('\[+([-\w()|.\' ]+)\]+')
 
+PLOT_REGEX = re.compile(r'\n\nPlot\n(.*?\.)')
 TIME_REGEX = re.compile('(\d+) ?[hours]* ?(\d*) ?[minutes]*')
+YEAR_REGEX_IN = re.compile('[Ii]n ?(the )?(year )?[-earlymidt]{0,5} ?(\d{4}[Ss]?)\D')
+YEAR_REGEX_ON = re.compile('[Oo]n ?([1-9]|[1-3][0-9])? ?([JFMASOND]\w{2,8})? ?([1-9]|[1-3][0-9])?,? ?(\d{4}[Ss]?)\D')
+
 MYSTERY_REGEX = re.compile('[*\[]* ?([-\w| ]+\w)\]* ?(<br ?/?>)*,*/* ?')
 FUZZY_LIST_REGEX = re.compile('[*|]* ?([\w(). ]+) ?')
 
@@ -81,13 +91,13 @@ def get_infobox(wikipage):
         return page.data['infobox']
 
 
-def get_title(wikipage):
+def get_title(infobox):
     """
     get title of wiki page
     :param wikipage: wikipage object
     :return: name of page
     """
-    return wikipage.title
+    return infobox['title']
 
 
 def get_director(infobox):
@@ -254,18 +264,56 @@ def get_language(infobox):
         return []
 
 
-def get_time():
+def get_plot(infobox):
+    """
+    get first sentence of plot from the text in pre formed infobox
+
+    :param infobox: infobox dict from processed json file
+    :return: first sentence in plot section
+    """
+    try:
+        page_text = get_text(infobox)
+        return PLOT_REGEX.findall(page_text)[0]
+    except:
+        return ''
+
+
+def get_time(infobox):
+    """
+    get background year from the first sentence of the plot part
+    here are sample times:
+        In 1986, in Scotland,
+        In 1940s Warwickshire,
+        In the 1980s,
+        In the early 1930s,
+        In the mid-1990s,
+        In the year 33 AD,
+        in the year 1983,
+        On 3 July 1990,
+        On June 21, 2028,
+        Set in 1527 during King Jungjong's reign
+        Rome, 2017.
+
+    :param infobox: infobox dict from processed json file
+    :return: decimal year as a string
+    """
+    plot = get_plot(infobox)
+    try:
+        return YEAR_REGEX_IN.findall(plot)[0][2]
+    except IndexError:
+        try:
+            return YEAR_REGEX_ON.findall(plot)[0][3]
+        except:
+            return ''
+    except:
+        return ''
+
+
+def get_location(infobox):
     """
     TODO
     """
-    pass
-
-
-def get_location():
-    """
-    TODO
-    """
-    pass
+    return ''
 
 
 def get_text(infobox):
@@ -310,7 +358,7 @@ def get_categories(infobox):
         return []
 
 
-def get_data_dict(infobox, wikipage):
+def get_data_dict(infobox):
     """
     return formed data as dict
 
@@ -318,14 +366,14 @@ def get_data_dict(infobox, wikipage):
     :param wikipage: wikipage object
     :return: formed data dict
     """
-    return {'Title': get_title(wikipage),
+    return {'Title': get_title(infobox),
             'Director': get_director(infobox),
             'Starring': get_starring(infobox),
             'Running time': get_runtime(infobox),
             'Country': get_country(infobox),
             'Language': get_language(infobox),
-            'Time': '',
-            'Location': '',
+            'Time': get_time(infobox),
+            'Location': get_location(infobox),
             'Categories': get_categories(infobox),
             'Text': get_text(infobox)}
 
@@ -348,9 +396,10 @@ def collect_raw_data():
     :return: json file containing all info
     """
     try:
-        # get all pages
+        # use wikipedia api to get all films name
         wiki = wikipediaapi.Wikipedia('en')
         cat = wiki.page("Category:2018 films")
+        # get list of film names
         cat_pages = [wiki.page(p) for p in cat.categorymembers]
 
         index = 1
@@ -364,7 +413,7 @@ def collect_raw_data():
             json_dict[index] = infobox
             index += 1
     except:
-        pass
+        print('Opps, something wrong happened, try again.')
     finally:
-        with open('raw_data_2.json', 'w') as output:
+        with open('input/raw_data_2.json', 'w') as output:
             json.dump(json_dict, output)

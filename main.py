@@ -1,27 +1,33 @@
-import wikipediaapi
-import wptools
+"""
+Assignment 2: Building a Corpus
+Name: Chenfeng Fan (fanc@brandeis.edu)
+"""
+
 import json
+import wptools
+import wikipediaapi
 from helper import *
 
 
-# collect_raw_data()
+def main(output_name='output/2018_movies.json'):
+    # read pre collected raw data json file, which contains all infobox data, page title, categories, and text
+    with open('input/raw_data.json') as f:
+        json_data_raw = json.load(f)
 
-wiki = wikipediaapi.Wikipedia('en')
-cat = wiki.page("Category:2018 films")
-cat_pages = [wiki.page(p) for p in cat.categorymembers]
+    json_dict = {}
+    # iterate through all infoboxes
+    for index in json_data_raw:
+        infobox = json_data_raw[index]
+        data_dict = get_data_dict(infobox)
+        json_dict[index] = data_dict
+        # if index == '100':
+        #     break
 
-with open('raw_data.json') as f:
-    json_data_raw = json.load(f)
+    # write output json file
+    with open(output_name, 'w') as output:
+        json.dump(json_dict, output)
 
-index = 1
-json_dict = {}
-for wikipage in cat_pages:
-    infobox = json_data_raw[str(index)]
-    data_dict = get_data_dict(infobox, wikipage)
-    json_dict[index] = data_dict
 
-    index += 1
-    # if index == 201:
-    #     break
-with open('output/2018_movies.json', 'w') as output:
-    json.dump(json_dict, output)
+if __name__ == '__main__':
+    # collect_raw_data()  # run this line if want to collect raw data again, it will take a long time.
+    main('output/2018_movies_2.json')
